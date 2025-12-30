@@ -1,0 +1,36 @@
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+credentials.json
+
+# Cloudflare tunnel files
+*.json
+!package.json
+*.crt
+
+# Logs
+*.log
+logs/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
