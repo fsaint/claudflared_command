@@ -131,7 +131,7 @@ restart_cloudflared() {
         launchctl start com.cloudflare.cloudflared
     else
         # Kill existing process and restart
-        pkill -f "cloudflared tunnel run" 2>/dev/null || true
+        pkill -f "cloudflared tunnel" 2>/dev/null || true
         sleep 1
         
         # Start in background

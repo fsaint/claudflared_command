@@ -114,7 +114,7 @@ _cf_restart() {
         sleep 1
         launchctl start com.cloudflare.cloudflared
     else
-        pkill -f "cloudflared tunnel run" 2>/dev/null || true
+        pkill -f "cloudflared tunnel" 2>/dev/null || true
         sleep 1
         nohup cloudflared tunnel --config "$CLOUDFLARED_CONFIG" run > /tmp/cloudflared.log 2>&1 &
         disown
@@ -137,6 +137,11 @@ cf_start() {
 # Stop cloudflared
 cf_stop() {
     echo "Stopping cloudflared..."
-    pkill -f "cloudflared tunnel run" 2>/dev/null || true
+    pkill -f "cloudflared tunnel" 2>/dev/null || true
+    sleep 1
+    if pgrep -f "cloudflared tunnel" > /dev/null; then
+        echo "❌ Failed to stop cloudflared"
+        return 1
+    fi
     echo "✓ Stopped"
 }
