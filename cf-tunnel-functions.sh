@@ -47,8 +47,8 @@ cf_register() {
     # Remove existing rule if any
     yq -i "del(.ingress[] | select(.hostname == \"$hostname\"))" "$CLOUDFLARED_CONFIG" 2>/dev/null
     
-    # Add new rule before catch-all
-    yq -i ".ingress = [.ingress[0:-1][], {\"hostname\": \"$hostname\", \"service\": \"$service\"}, .ingress[-1]]" "$CLOUDFLARED_CONFIG"
+    # Add new rule before catch-all (catch-all must always be last)
+    yq -i ".ingress |= (.[:-1] + [{\"hostname\": \"$hostname\", \"service\": \"$service\"}] + [.[-1]])" "$CLOUDFLARED_CONFIG"
     
     # Validate
     if ! cloudflared tunnel ingress validate --config "$CLOUDFLARED_CONFIG" &>/dev/null; then
@@ -110,16 +110,25 @@ cf_status() {
 
 # Internal: restart cloudflared
 _cf_restart() {
+    echo "🔄 Restarting cloudflared..."
     if launchctl list 2>/dev/null | grep -q "com.cloudflare.cloudflared"; then
         launchctl stop com.cloudflare.cloudflared 2>/dev/null || true
         sleep 1
         launchctl start com.cloudflare.cloudflared
     else
-        pkill -f "cloudflared tunnel" 2>/dev/null || true
+        # Stop any running instance
+        pkill -f "cloudflared" 2>/dev/null || true
         sleep 1
+        # Force kill if still running
+        if pgrep -f "cloudflared" > /dev/null; then
+            pkill -9 -f "cloudflared" 2>/dev/null || true
+            sleep 1
+        fi
+        # Start fresh
         nohup cloudflared tunnel --config "$CLOUDFLARED_CONFIG" run > /tmp/cloudflared.log 2>&1 &
         disown
     fi
+    echo "✓ Cloudflared restarted"
 }
 
 # Start cloudflared if not running
@@ -138,9 +147,16 @@ cf_start() {
 # Stop cloudflared
 cf_stop() {
     echo "Stopping cloudflared..."
-    pkill -f "cloudflared tunnel" 2>/dev/null || true
+    # First try graceful termination
+    pkill -f "cloudflared" 2>/dev/null || true
     sleep 1
-    if pgrep -f "cloudflared tunnel" > /dev/null; then
+    # If still running, force kill
+    if pgrep -f "cloudflared" > /dev/null; then
+        echo "Process didn't stop gracefully, force killing..."
+        pkill -9 -f "cloudflared" 2>/dev/null || true
+        sleep 1
+    fi
+    if pgrep -f "cloudflared" > /dev/null; then
         echo "❌ Failed to stop cloudflared"
         return 1
     fi
