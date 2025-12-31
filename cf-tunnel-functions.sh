@@ -51,7 +51,7 @@ cf_register() {
     yq -i ".ingress |= (.[:-1] + [{\"hostname\": \"$hostname\", \"service\": \"$service\"}] + [.[-1]])" "$CLOUDFLARED_CONFIG"
     
     # Validate
-    if ! cloudflared tunnel ingress validate --config "$CLOUDFLARED_CONFIG" &>/dev/null; then
+    if ! cloudflared tunnel --config "$CLOUDFLARED_CONFIG" ingress validate &>/dev/null; then
         echo "❌ Validation failed!"
         return 1
     fi
