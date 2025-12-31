@@ -7,6 +7,7 @@
 #   cf_register myapp 3000
 #   cf_deregister myapp
 #   cf_list
+#   cf_logs [lines]
 
 export CF_BASE_DOMAIN="${CF_BASE_DOMAIN:-btv.pw}"
 export CF_TUNNEL_NAME="${CF_TUNNEL_NAME:-main-tunnel}"
@@ -144,4 +145,20 @@ cf_stop() {
         return 1
     fi
     echo "✓ Stopped"
+}
+
+# Tail cloudflared logs
+cf_logs() {
+    local lines="${1:-50}"
+    local log_file="/tmp/cloudflared.log"
+
+    if [[ ! -f "$log_file" ]]; then
+        echo "❌ Log file not found: $log_file"
+        echo "cloudflared may not have been started yet or is running as a launchctl service"
+        return 1
+    fi
+
+    echo "📜 Tailing cloudflared logs (Ctrl+C to exit)..."
+    echo ""
+    tail -n "$lines" -f "$log_file"
 }
