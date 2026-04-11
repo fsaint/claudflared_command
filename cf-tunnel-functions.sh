@@ -62,6 +62,63 @@ cf_register() {
     echo "✓ Registered: https://$hostname"
 }
 
+# Register a full domain (not a subdomain of CF_BASE_DOMAIN)
+# Use this for purchased domains that have their own DNS pointing to the tunnel.
+# Usage: cf_register_domain willowbead.com 8000
+cf_register_domain() {
+    local hostname="$1"
+    local port="$2"
+    local service="http://localhost:${port}"
+
+    if [[ -z "$hostname" || -z "$port" ]]; then
+        echo "Usage: cf_register_domain <full-hostname> <port>"
+        echo "Example: cf_register_domain willowbead.com 8000"
+        return 1
+    fi
+
+    echo "📡 Registering: $hostname -> $service"
+
+    if [[ ! -f "$CLOUDFLARED_CONFIG" ]]; then
+        echo "❌ Config not found: $CLOUDFLARED_CONFIG"
+        return 1
+    fi
+
+    local existing
+    existing=$(yq ".ingress[] | select(.hostname == \"$hostname\") | .service" "$CLOUDFLARED_CONFIG" 2>/dev/null)
+
+    if [[ "$existing" == "$service" ]]; then
+        echo "✓ Already registered: $hostname -> $service"
+        return 0
+    fi
+
+    yq -i "del(.ingress[] | select(.hostname == \"$hostname\"))" "$CLOUDFLARED_CONFIG" 2>/dev/null
+    yq -i ".ingress |= (.[:-1] + [{\"hostname\": \"$hostname\", \"service\": \"$service\"}] + [.[-1]])" "$CLOUDFLARED_CONFIG"
+
+    if ! cloudflared tunnel --config "$CLOUDFLARED_CONFIG" ingress validate &>/dev/null; then
+        echo "❌ Validation failed!"
+        return 1
+    fi
+
+    _cf_restart
+    echo "✓ Registered: https://$hostname"
+}
+
+# Remove a full domain from the tunnel
+# Usage: cf_deregister_domain willowbead.com
+cf_deregister_domain() {
+    local hostname="$1"
+
+    if [[ -z "$hostname" ]]; then
+        echo "Usage: cf_deregister_domain <full-hostname>"
+        return 1
+    fi
+
+    echo "🗑️  Removing: $hostname"
+    yq -i "del(.ingress[] | select(.hostname == \"$hostname\"))" "$CLOUDFLARED_CONFIG"
+    _cf_restart
+    echo "✓ Removed: $hostname"
+}
+
 # Remove a service from the tunnel
 cf_deregister() {
     local subdomain="$1"

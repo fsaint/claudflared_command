@@ -55,9 +55,14 @@ ingress:
 ### Shell Functions (Recommended)
 
 ```bash
-# Register a service
+# Register a subdomain service
 cf_register myapp 3000
 # -> Creates: myapp.yourdomain.com -> http://localhost:3000
+
+# Register a purchased/external domain (full hostname, not a subdomain)
+cf_register_domain willowbead.com 8000
+# -> Creates: willowbead.com -> http://localhost:8000
+# DNS: add a CNAME for willowbead.com -> <tunnel-id>.cfargotunnel.com in Cloudflare
 
 # List all routes
 cf_list
@@ -65,8 +70,11 @@ cf_list
 # Check status
 cf_status
 
-# Remove a service
+# Remove a subdomain service
 cf_deregister myapp
+
+# Remove a full domain
+cf_deregister_domain willowbead.com
 
 # Start/stop cloudflared
 cf_start
@@ -129,6 +137,11 @@ ingress:
     service: http://localhost:3000
   - hostname: app.btv.pw
     service: http://localhost:5173
+  # Full external domains (added via cf_register_domain)
+  - hostname: willowbead.com
+    service: http://localhost:8000
+  - hostname: mavraac.com
+    service: http://localhost:8000
   - service: http_status:404
 ```
 
